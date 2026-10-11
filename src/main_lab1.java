@@ -44,6 +44,25 @@ class Complex {
         double newIm = (this.im*other.re - this.re*other.im) / denominator;
         return new Complex(newRe,newIm);
     }
+
+    public void print() {
+        if (this.im == 0 && this.re == 0) {
+            System.out.print("    0    ");
+        }
+        if (this.im == 0) {
+            System.out.print("  "+this.re+"  ");
+        }
+        if (this.re == 0) {
+            System.out.print("  "+this.im+"i  ");
+        }
+        if (this.im >= 0) {
+            System.out.print(this.re + " + " + this.im + "i");
+        }
+        else {
+            // если мнимая часть отрицательная, знак "-" внутри надо убрать, для красивого вывода
+            System.out.print(this.re + " - " + Math.abs(this.im) + "i");
+        }
+    }
 }
 
 class MatrixSizeMismatchException extends RuntimeException {
@@ -62,11 +81,14 @@ class ComplexMatrix {
         this.cols = cols;
         this.matrix = new Complex[rows][cols];
     }
+    public Complex getElement(int row, int col) {
+        return this.matrix[row][col];
+    }
     public void setElement(int row, int col, Complex val) {
         this.matrix[row][col] = val;
     }
 
-    public ComplexMatrix getMinor(int minor_row, int minor_col) {
+    public ComplexMatrix getMinorMatrix(int minor_row, int minor_col) {
         ComplexMatrix minorMatrix = new ComplexMatrix(this.rows-1, this.cols-1);
         for (int i = 0; i < this.rows; i++) {
             if (i == minor_row) {continue;}
@@ -105,8 +127,8 @@ class ComplexMatrix {
         }
         Complex det = new Complex();
         for (int j = 0; j < this.cols; j++){ // получаем миноры по первой строке
-            ComplexMatrix minor = getMinor(0,j); // матрица без 1ой строки и jого столбца
-            Complex minorDet = minor.determinant(); // определитель матрицы без 1ой строки и jого столбца
+            ComplexMatrix minorMatrix = getMinorMatrix(0,j); // матрица без 1ой строки и jого столбца
+            Complex minorDet = minorMatrix.determinant(); // определитель матрицы без 1ой строки и jого столбца
             Complex t = this.matrix[0][j].multiply(minorDet);
             if (j%2==0) {
                 det = det.plus(t); // для j = 0 (1 эл-т 1ой строки) должен быть знак +
@@ -170,5 +192,49 @@ class ComplexMatrix {
         return multiplyMatrix;
     }
 
+    public ComplexMatrix inverseMatrix() {
+        if (this.rows != this.cols){
+            throw new MatrixSizeMismatchException("Нельзя посчитать обратную матрицу, т.к матрица не квадратная");
+        }
+        Complex det = this.determinant();
+        if (det.getRe() == 0 && det.getIm() == 0) {
+            throw new ArithmeticException("Матрица вырождена - детерминант равен 0");
+        }
+        ComplexMatrix adjugateMatrix = new ComplexMatrix(this.rows,this.cols); // матрица дополнений
+        /* В ней каждому элементу aij исходной матрицы соответствует его алгебраическое дополнение (минор умноженный на (-1)^(i+j))*/
+        for (int i = 0; i < this.rows; i++){
+            for (int j = 0; j < this.cols; j++){
+                ComplexMatrix minorMatrix = getMinorMatrix(i,j);
+                Complex minorDet = minorMatrix.determinant();
+                if ((i+j) % 2 == 1) {
+                    minorDet = minorDet.multiply(new Complex(-1));
+                }
+                adjugateMatrix.setElement(i,j,minorDet);
+            }
+        }
+        ComplexMatrix transposedAdjugateMatrix = adjugateMatrix.transposedMatrix(); // транспонируем матрицу дополнений, получаем союзную матрицу
+        ComplexMatrix inverseMatrix = new ComplexMatrix(this.rows,this.cols);
+        for (int i = 0; i < this.rows; i++){
+            for (int j = 0; j < this.cols; j++){
+                Complex newElement = transposedAdjugateMatrix.matrix[i][j].divide(det); // каждый элемент союзной матрицы делим на детерминант исходной матрицы
+                inverseMatrix.setElement(i,j,newElement);
+            }
+        }
+        return inverseMatrix;
+    }
 
+    public ComplexMatrix divide(ComplexMatrix other){ // деление это умножение на ообратную матрицу, а возможность умножения проверяется в методе multiply
+        ComplexMatrix inverseOtherMatrix = other.inverseMatrix();
+        return this.multiply(inverseOtherMatrix);
+    }
+    public void printMatrix() {
+        for (int i = 0; i < this.rows; i++){
+            System.out.print("( ");
+            for (int j = 0; j < this.cols; j++) {
+                this.matrix[i][j].print();
+                System.out.print("  ");
+            }
+            System.out.print(" )");
+        }
+    }
 }
