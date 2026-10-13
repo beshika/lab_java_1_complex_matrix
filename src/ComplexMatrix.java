@@ -1,77 +1,4 @@
-class Complex {
-    private double re;
-    private double im;
-    public Complex (double x, double y) {
-        this.re = x;
-        this.im = y;
-    }
-    public Complex(double x) {
-        this(x,0);
-    }
-    public Complex() {
-        this(0,0);
-    }
-    public double getRe() {return re;}
-    public double getIm() {return im;}
-    public void setIm(double im) {
-        this.im = im;
-    }
-    public void setRe(double re) {
-        this.re = re;
-    }
-    public Complex plus(Complex other) {
-        return new Complex(this.re+other.re, this.im+other.im);
-    }
-    public Complex minus(Complex other) {
-        return new Complex(this.re-other.re, this.im-other.im);
-    }
-    // z1*z2 = (a + bi)*(c + di) = ac + bci + adi - bd = ac - bd + (bc - ad)i
-    public Complex multiply(Complex other) {
-        double newRe = this.re*other.re - this.im*other.im;
-        double newIm = this.im*other.re + this.re*other.im;
-        return new Complex(newRe, newIm);
-    }
-    /* z1 = a + bi; z2 = x + yi
-    * z1/z2 = [домножить числитель и знаменатель на сопряженное к z2 = x - yi]
-    * = (a + bi)(x - yi)/(x^2+y^2) = [где (x^2+y^2) - действительное число] =
-    * = ((ax + by) + (bx - ay)i)/(x^2+y^2)*/
-    public Complex divide(Complex other) {
-        double denominator = other.re*other.re + other.im*other.im;
-        if (denominator == 0) {
-            throw new ArithmeticException("Деление на ноль запрещено");
-        }
-        double newRe = (this.re*other.re + this.im*other.im) / denominator;
-        double newIm = (this.im*other.re - this.re*other.im) / denominator;
-        return new Complex(newRe,newIm);
-    }
-
-    public void print() {
-        if (this.im == 0 && this.re == 0) {
-            System.out.print("    0    ");
-        }
-        if (this.im == 0) {
-            System.out.print("  "+this.re+"  ");
-        }
-        if (this.re == 0) {
-            System.out.print("  "+this.im+"i  ");
-        }
-        if (this.im >= 0) {
-            System.out.print(this.re + " + " + this.im + "i");
-        }
-        else {
-            // если мнимая часть отрицательная, знак "-" внутри надо убрать, для красивого вывода
-            System.out.print(this.re + " - " + Math.abs(this.im) + "i");
-        }
-    }
-}
-
-class MatrixSizeMismatchException extends RuntimeException {
-    public MatrixSizeMismatchException(String message) {
-        super(message);
-    }
-}
-
-class ComplexMatrix {
+public class ComplexMatrix {
     final private int rows;
     final private int cols;
     final private Complex[][] matrix;
@@ -87,8 +14,18 @@ class ComplexMatrix {
     public void setElement(int row, int col, Complex val) {
         this.matrix[row][col] = val;
     }
+    public void changeElement(int userRow, int userCol, Complex newValue) {
+        // перевод из пользовательских координат (с 1) в программные (с 0)
+        int r = userRow - 1;
+        int c = userCol - 1;
+        // проверка, входят ли индексы в границы матрицы
+        if (r < 0 || r >= this.rows || c < 0 || c >= this.cols) {
+            throw new IllegalArgumentException("Ячейки с координатами [" + userRow + "][" + userCol + "] не существует!");
+        }
+        this.setElement(r, c, newValue);
+    }
 
-    public ComplexMatrix getMinorMatrix(int minor_row, int minor_col) {
+    public ComplexMatrix getMinorMatrix(int minor_row, int minor_col) { // метод для получения матрицы без iой строки и jого столбца
         ComplexMatrix minorMatrix = new ComplexMatrix(this.rows-1, this.cols-1);
         for (int i = 0; i < this.rows; i++) {
             if (i == minor_row) {continue;}
@@ -113,13 +50,13 @@ class ComplexMatrix {
     }
     public Complex determinant() {
         if (this.rows != this.cols){
-            throw new MatrixSizeMismatchException("Нельзя посчитать детерминант, т.к матрица не квадратная");
+            throw new IllegalArgumentException("Нельзя посчитать детерминант, т.к матрица не квадратная");
         }
         if (this.rows == 1){
             return this.matrix[0][0];
         }
         /* A = (a b)
-        *      (c d)   det A = ad - bc  */
+         *      (c d)   det A = ad - bc  */
         if (this.rows == 2) {
             Complex ad = this.matrix[0][0].multiply(this.matrix[1][1]);
             Complex bc = this.matrix[0][1].multiply(this.matrix[1][0]);
@@ -152,7 +89,7 @@ class ComplexMatrix {
     }
     public ComplexMatrix plus(ComplexMatrix other){
         if ((this.rows != other.rows) || (this.cols != other.cols)){
-            throw new MatrixSizeMismatchException("Нельзя сложить матрицы разного размера");
+            throw new IllegalArgumentException("Нельзя сложить матрицы разного размера");
         }
         ComplexMatrix sumMatrix = new ComplexMatrix(this.rows,this.cols);
         for (int i = 0; i < this.rows; i++) {
@@ -164,7 +101,7 @@ class ComplexMatrix {
     }
     public ComplexMatrix minus(ComplexMatrix other){
         if ((this.rows != other.rows) || (this.cols != other.cols)){
-            throw new MatrixSizeMismatchException("Нельзя вычитать матрицы разного размера");
+            throw new IllegalArgumentException("Нельзя вычитать матрицы разного размера");
         }
         ComplexMatrix minusMatrix = new ComplexMatrix(this.rows,this.cols);
         for (int i = 0; i < this.rows; i++) {
@@ -176,7 +113,7 @@ class ComplexMatrix {
     }
     public ComplexMatrix multiply(ComplexMatrix other) {
         if (this.cols != other.rows){
-            throw new MatrixSizeMismatchException("Нельзя умножать матрицу с "+this.cols+" столбцами на матрицу с "+other.rows+" строчками");
+            throw new IllegalArgumentException("Нельзя умножать матрицу с "+this.cols+" столбцами на матрицу с "+other.rows+" строчками");
         }
         ComplexMatrix multiplyMatrix = new ComplexMatrix(this.rows,other.cols);
         for (int i = 0; i < this.rows; i++) {
@@ -194,7 +131,7 @@ class ComplexMatrix {
 
     public ComplexMatrix inverseMatrix() {
         if (this.rows != this.cols){
-            throw new MatrixSizeMismatchException("Нельзя посчитать обратную матрицу, т.к матрица не квадратная");
+            throw new IllegalArgumentException("Нельзя посчитать обратную матрицу, т.к матрица не квадратная");
         }
         Complex det = this.determinant();
         if (det.getRe() == 0 && det.getIm() == 0) {
@@ -223,7 +160,7 @@ class ComplexMatrix {
         return inverseMatrix;
     }
 
-    public ComplexMatrix divide(ComplexMatrix other){ // деление это умножение на ообратную матрицу, а возможность умножения проверяется в методе multiply
+    public ComplexMatrix divide(ComplexMatrix other){ // деление это умножение на обратную матрицу, а возможность умножения проверяется в методе multiply
         ComplexMatrix inverseOtherMatrix = other.inverseMatrix();
         return this.multiply(inverseOtherMatrix);
     }
@@ -232,9 +169,10 @@ class ComplexMatrix {
             System.out.print("( ");
             for (int j = 0; j < this.cols; j++) {
                 this.matrix[i][j].print();
-                System.out.print("  ");
+                System.out.print("   ");
             }
             System.out.print(" )");
+            System.out.println();
         }
     }
 }
